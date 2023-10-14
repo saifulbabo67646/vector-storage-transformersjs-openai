@@ -1,7 +1,7 @@
 {
   "name": "vector-storage",
   "version": "1.0.54",
-  "description": "A lightweight and efficient vector database for storing and searching text embeddings in the browser's local storage. The package uses OpenAI's API to generate embeddings for text documents and provides functionality for similarity search, filtering, and automatic management of local storage space. It is designed for use cases where client-side storage and retrieval of text embeddings are needed.",
+  "description": "A lightweight and efficient vector database for storing and searching text embeddings in the browser's local storage. The package uses Transformers.js to generate embeddings for text documents and provides functionality for similarity search, filtering, and automatic management of local storage space. It is designed for use cases where client-side storage and retrieval of text embeddings are needed.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "repository": {
@@ -22,7 +22,7 @@
     "text",
     "search",
     "similarity",
-    "OpenAI",
+    "transformers",
     "API"
   ],
   "scripts": {
@@ -34,6 +34,7 @@
   "author": "Nitai Aharoni",
   "license": "MIT",
   "dependencies": {
+    "@xenova/transformers": "^2.6.2",
     "dexie": "^3.2.3",
     "idb": "^7.1.1"
   },

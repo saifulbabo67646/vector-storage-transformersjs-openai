@@ -1,6 +1,6 @@
 # Vector Storage
 
-Vector Storage is a lightweight and efficient vector database that stores document vectors in the browser's IndexedDB. This package allows you to perform semantic similarity searches on text documents using vector embeddings. Semantic search refers to the ability to understand the meaning and context of text documents and queries, enabling more accurate and relevant search results. Vector Storage leverages OpenAI embeddings to convert text documents into vectors and provides an interface for searching similar documents based on cosine similarity.
+Vector Storage is a lightweight and efficient vector database that stores document vectors in the browser's IndexedDB. This package allows you to perform semantic similarity searches on text documents using vector embeddings. Semantic search refers to the ability to understand the meaning and context of text documents and queries, enabling more accurate and relevant search results. Vector Storage leverages Transformers.js embeddings to convert text documents into vectors and provides an interface for searching similar documents based on cosine similarity.
 
 ## Features
 
@@ -38,7 +38,7 @@ Here is a basic example of how to use the VectorStorage class:
 import { VectorStorage } from "vector-storage";
 
 // Create an instance of VectorStorage
-const vectorStore = new VectorStorage({ openAIApiKey: "your-openai-api-key" });
+const vectorStore = new VectorStorage({ sentenceTransformerModel: "Supabase/gte-small" });
 
 // Add a text document to the store
 await vectorStore.addText("The quick brown fox jumps over the lazy dog.", {
@@ -54,6 +54,8 @@ const results = await vectorStore.similaritySearch({
 console.log(results);
 ```
 
+**Note:** it will only work on models with ONNX weights to be compatible wtih Transformers.js. [You can find sentence transformer models here](https://huggingface.co/models?library=transformers.js)
+
 ## API
 
 ### VectorStorage
@@ -68,10 +70,8 @@ Creates a new instance of VectorStorage.
 
 ```typescript
 interface IVSOptions {
-  openAIApiKey: string; // The OpenAI API key used for generating embeddings.
   maxSizeInMB?: number; // The maximum size of the storage in megabytes. Defaults to 2GB
-  debounceTime?: number; // The debounce time in milliseconds for saving to IndexedDB. Defaults to 0.
-  openaiModel?: string; // The OpenAI model used for generating embeddings. Defaults to 'text-embedding-ada-002'.
+  sentenceTransformerModel?: string; // The Transformers.js model used for generating embeddings. Defaults to 'Xenova/bge-small-en-v1.5'.
 }
 ```
 

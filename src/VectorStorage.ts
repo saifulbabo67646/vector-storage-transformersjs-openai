@@ -1,8 +1,8 @@
-import { ICreateEmbeddingResponse } from './types/ICreateEmbeddingResponse';
 import { IDBPDatabase, openDB } from 'idb';
 import { IVSDocument, IVSSimilaritySearchItem } from './types/IVSDocument';
 import { IVSOptions } from './types/IVSOptions';
 import { IVSSimilaritySearchParams } from './types/IVSSimilaritySearchParams';
+import { Pipeline, pipeline } from '@xenova/transformers';
 import { constants } from './common/constants';
 import { filterDocuments, getObjectSizeInMB } from './common/helpers';
 
@@ -10,22 +10,13 @@ export class VectorStorage<T> {
   private db!: IDBPDatabase<any>;
   private documents: Array<IVSDocument<T>> = [];
   private readonly maxSizeInMB: number;
-  private readonly debounceTime: number;
-  private readonly openaiModel: string;
-  private readonly openaiApiKey?: string;
-  private readonly embedTextsFn: (texts: string[]) => Promise<number[][]>;
+  private readonly sentenceTransformerModel: string;
+  private pipeline: Pipeline | undefined;
 
   constructor(options: IVSOptions = {}) {
     this.maxSizeInMB = options.maxSizeInMB ?? constants.DEFAULT_MAX_SIZE_IN_MB;
-    this.debounceTime = options.debounceTime ?? constants.DEFAULT_DEBOUNCE_TIME;
-    this.openaiModel = options.openaiModel ?? constants.DEFAULT_OPENAI_MODEL;
-    this.embedTextsFn = options.embedTextsFn ?? this.embedTexts; // Use the custom function if provided, else use the default one
-    this.openaiApiKey = options.openAIApiKey;
-    if (!this.openaiApiKey && !options.embedTextsFn) {
-      console.error('VectorStorage: pass as an option either an OpenAI API key or a custom embedTextsFn function.');
-    } else {
-      this.loadFromIndexDbStorage();
-    }
+    this.sentenceTransformerModel = options.sentenceTransformerModel ?? constants.DEFAULT_SENTENCE_TRANSFORMER_MODEL;
+    this.initialize();
   }
 
   public async addText(text: string, metadata: T): Promise<IVSDocument<T>> {
@@ -107,7 +98,7 @@ export class VectorStorage<T> {
     if (newDocuments.length === 0) {
       return [];
     }
-    const newVectors = await this.embedTextsFn(newDocuments.map((doc) => doc.text));
+    const newVectors = await this.embedTexts(newDocuments.map((doc) => doc.text));
     // Assign vectors and precompute vector magnitudes for new documents
     newDocuments.forEach((doc, index) => {
       doc.vector = newVectors[index];
@@ -122,28 +113,23 @@ export class VectorStorage<T> {
   }
 
   private async embedTexts(texts: string[]): Promise<number[][]> {
-    const response = await fetch(constants.OPENAI_API_URL, {
-      body: JSON.stringify({
-        input: texts,
-        model: this.openaiModel,
-      }),
-      headers: {
-        Authorization: `Bearer ${this.openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      method: 'POST',
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (!this.pipeline) {
+      await this.initPipeline();
     }
-
-    const responseData = (await response.json()) as ICreateEmbeddingResponse;
-    return responseData.data.map((data) => data.embedding);
+    const embeddings: number[][] = [];
+    for (const text of texts) {
+      // eslint-disable-next-line no-await-in-loop
+      const embedding = await this.pipeline!(text, {
+        normalize: true,
+        pooling: 'mean',
+      });
+      embeddings.push(embedding.data);
+    }
+    return embeddings;
   }
 
   private async embedText(query: string): Promise<number[]> {
-    return (await this.embedTextsFn([query]))[0];
+    return (await this.embedTexts([query]))[0];
   }
 
   private calculateMagnitude(embedding: number[]): number {
@@ -164,6 +150,15 @@ export class VectorStorage<T> {
     results.forEach((doc) => {
       doc.hits = (doc.hits ?? 0) + 1; // Update hit counter
     });
+  }
+
+  private async initialize(): Promise<void> {
+    await this.initPipeline();
+    await this.loadFromIndexDbStorage();
+  }
+
+  private async initPipeline(): Promise<void> {
+    this.pipeline = await pipeline('feature-extraction', this.sentenceTransformerModel);
   }
 
   private async loadFromIndexDbStorage(): Promise<void> {
