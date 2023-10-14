@@ -1,4 +1,6 @@
-# Vector Storage
+# Vector Storage + Transformers.js
+
+An AI text similarity search engine that works completely inside the browser.
 
 Vector Storage is a lightweight and efficient vector database that stores document vectors in the browser's IndexedDB. This package allows you to perform semantic similarity searches on text documents using vector embeddings. Semantic search refers to the ability to understand the meaning and context of text documents and queries, enabling more accurate and relevant search results. Vector Storage leverages Transformers.js embeddings to convert text documents into vectors and provides an interface for searching similar documents based on cosine similarity.
 
